@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Đăng ký tài khoản{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="card shadow-sm mt-4">
+      <div class="card-body p-4">
+        <h4 class="text-center mb-4">Đăng ký tài khoản</h4>
+
+        {% if error %}
+          <div class="alert alert-danger py-2">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="/register">
+          <div class="mb-3">
+            <label class="form-label">Tên đăng nhập</label>
+            <input name="username" class="form-control" value="{{ username or '' }}" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Họ và tên</label>
+            <input name="full_name" class="form-control" value="{{ full_name or '' }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input name="email" type="email" class="form-control" value="{{ email or '' }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Mật khẩu</label>
+            <input name="password" type="password" class="form-control" required>
+            <div class="form-text">Ít nhất 6 ký tự</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Xác nhận mật khẩu</label>
+            <input name="password2" type="password" class="form-control" required>
+          </div>
+          <button class="btn btn-primary w-100">Đăng ký</button>
+        </form>
+
+        <div class="text-center mt-3">
+          <a href="/login">Đã có tài khoản? Đăng nhập</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
