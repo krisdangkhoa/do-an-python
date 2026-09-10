@@ -3,11 +3,91 @@
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 
 {% block content %}
-<div class="card shadow-sm">
-  <div class="card-body p-4">
-    <h4>Xin chào, {{ user.full_name }}</h4>
-    <p class="text-muted mb-3">Biểu đồ và báo cáo tổng quan sẽ được xây dựng ở giai đoạn 3.</p>
-    <a href="/categories" class="btn btn-primary btn-sm">Quản lý danh mục</a>
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card shadow-sm h-100">
+      <div class="card-body p-4">
+        <h5 class="mb-1">Xin chào, {{ user.full_name }}</h5>
+        <p class="text-muted small mb-3">Tổng quan tài chính của bạn</p>
+
+        {% include "_filter.html" %}
+
+        <div class="mb-3">
+          <div class="text-muted small">Số dư trong kỳ</div>
+          <div class="fs-3 fw-bold {% if s.balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {{ s.balance|vnd }} <span class="fs-6 fw-normal text-muted">VND</span>
+          </div>
+        </div>
+
+        <div class="row g-2 text-center">
+          <div class="col-4">
+            <div class="border rounded p-2">
+              <div class="text-muted small">Thu nhập</div>
+              <div class="fw-semibold text-success">{{ s.income|vnd }}</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="border rounded p-2">
+              <div class="text-muted small">Chi tiêu</div>
+              <div class="fw-semibold text-danger">{{ s.expense|vnd }}</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="border rounded p-2">
+              <div class="text-muted small">Giao dịch</div>
+              <div class="fw-semibold">{{ s.count }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <a href="/transactions" class="btn btn-primary btn-sm">Thêm giao dịch</a>
+          <a href="/report" class="btn btn-outline-secondary btn-sm">Xem báo cáo</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card shadow-sm h-100">
+      <div class="card-body p-4">
+        <h6 class="mb-3">Tỷ lệ thu nhập và chi tiêu</h6>
+        {% if s.count > 0 %}
+          <canvas id="pie" height="260"></canvas>
+        {% else %}
+          <p class="text-muted">Chưa có giao dịch nào trong kỳ này.</p>
+        {% endif %}
+      </div>
+    </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{% if s.count > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  new Chart(document.getElementById("pie"), {
+    type: "pie",
+    data: {
+      labels: ["Thu nhập", "Chi tiêu"],
+      datasets: [{
+        data: [{{ s.income }}, {{ s.expense }}],
+        backgroundColor: ["#198754", "#DC3545"],
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: "bottom" },
+        tooltip: {
+          callbacks: {
+            label: (c) => c.label + ": " + c.raw.toLocaleString("vi-VN") + " VND",
+          },
+        },
+      },
+    },
+  });
+</script>
+{% endif %}
 {% endblock %}

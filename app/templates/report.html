@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Báo cáo thống kê{% endblock %}
+{% block nav %}{% include "_nav.html" %}{% endblock %}
+
+{% block content %}
+<h5 class="mb-3">Báo cáo tổng quan</h5>
+{% include "_filter.html" %}
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card shadow-sm text-center h-100">
+      <div class="card-body">
+        <div class="text-muted small">Tổng thu nhập</div>
+        <div class="fs-4 fw-bold text-success">{{ s.income|vnd }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm text-center h-100">
+      <div class="card-body">
+        <div class="text-muted small">Tổng chi tiêu</div>
+        <div class="fs-4 fw-bold text-danger">{{ s.expense|vnd }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm text-center h-100">
+      <div class="card-body">
+        <div class="text-muted small">Số giao dịch</div>
+        <div class="fs-4 fw-bold">{{ s.count }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm text-center h-100">
+      <div class="card-body">
+        <div class="text-muted small">Số dư</div>
+        <div class="fs-4 fw-bold {% if s.balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+          {{ s.balance|vnd }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  {% for title, rows, color in [("Chi tiêu theo danh mục", expense_rows, "danger"),
+                                 ("Thu nhập theo danh mục", income_rows, "success")] %}
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="mb-3">{{ title }}</h6>
+        {% if rows %}
+          {% for r in rows %}
+          <div class="mb-3">
+            <div class="d-flex justify-content-between small mb-1">
+              <span class="fw-semibold">{{ r.name }}</span>
+              <span class="text-muted">{{ r.amount|vnd }} · {{ r.percent }}%</span>
+            </div>
+            <div class="progress" style="height:8px">
+              <div class="progress-bar bg-{{ color }}" style="width:{{ r.percent }}%"></div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted small mb-0">Chưa có dữ liệu trong kỳ này.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
