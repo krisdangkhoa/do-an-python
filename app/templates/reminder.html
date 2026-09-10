@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Lời nhắc định kỳ{% endblock %}
+{% block nav %}{% include "_nav.html" %}{% endblock %}
+
+{% block content %}
+{% set q = request.query_params %}
+{% if q.get("ok") == "created" %}<div class="alert alert-success py-2">Đã thêm lời nhắc mới.</div>{% endif %}
+{% if q.get("ok") == "updated" %}<div class="alert alert-success py-2">Đã cập nhật lời nhắc.</div>{% endif %}
+{% if q.get("ok") == "deleted" %}<div class="alert alert-success py-2">Đã xóa lời nhắc.</div>{% endif %}
+{% if q.get("ok") == "toggled" %}<div class="alert alert-success py-2">Đã đổi trạng thái lời nhắc.</div>{% endif %}
+{% if q.get("err") == "notfound" %}<div class="alert alert-danger py-2">Không tìm thấy lời nhắc.</div>{% endif %}
+{% if error %}<div class="alert alert-danger py-2">{{ error }}</div>{% endif %}
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h5 class="mb-3">{% if editing %}Cập nhật lời nhắc{% else %}Thêm lời nhắc mới{% endif %}</h5>
+    <form method="post" action="{% if editing %}/reminders/{{ editing.id }}/edit{% else %}/reminders{% endif %}">
+      <div class="row g-3">
+        <div class="col-md-5">
+          <label class="form-label">Nội dung nhắc</label>
+          <input name="message" class="form-control" required
+                 placeholder="Ví dụ: Đóng tiền nhà"
+                 value="{{ editing.message if editing else '' }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Thời gian nhắc</label>
+          <input type="datetime-local" name="remind_time" class="form-control" required
+                 value="{{ editing.remind_time.strftime('%Y-%m-%dT%H:%M') if editing else now }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Số tiền (VND)</label>
+          <input name="amount" class="form-control" required inputmode="numeric"
+                 value="{{ editing.amount if editing else '' }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Lặp lại</label>
+          <select name="repeat_type" class="form-select">
+            {% for r in repeats %}
+              <option value="{{ r.value }}"
+                {% if editing and editing.repeat_type == r.value %}selected{% endif %}>
+                {{ repeat_labels[r.value] }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Loại giao dịch</label>
+          <select name="type" id="rmType" class="form-select">
+            {% set curType = editing.type if editing else 'expense' %}
+            {% for t in types %}
+              <option value="{{ t.value }}" {% if curType == t.value %}selected{% endif %}>
+                {{ "Thu nhập" if t.value == "income" else "Chi tiêu" }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Danh mục</label>
+          <select name="category_id" id="rmCategory" class="form-select" required>
+            {% for c in categories %}
+              <option value="{{ c.id }}" data-type="{{ c.type }}"
+                {% if editing and editing.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3 d-flex flex-column justify-content-end">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="active" id="ck1" value="1"
+                   {% if not editing or editing.active %}checked{% endif %}>
+            <label class="form-check-label small" for="ck1">Kích hoạt lời nhắc</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="auto_add_transaction" id="ck2" value="1"
+                   {% if editing and editing.auto_add_transaction %}checked{% endif %}>
+            <label class="form-check-label small" for="ck2">Tự động thêm giao dịch</label>
+          </div>
+        </div>
+        <div class="col-md-3 d-flex gap-2 align-items-end">
+          <button class="btn btn-primary flex-fill">{% if editing %}Cập nhật{% else %}Thêm mới{% endif %}</button>
+          {% if editing %}<a href="/reminders" class="btn btn-outline-secondary">Hủy</a>{% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h5 class="mb-3">Danh sách lời nhắc <span class="text-muted fs-6">({{ reminders|length }})</span></h5>
+    {% if reminders %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Nội dung</th><th>Thời gian</th><th class="text-end">Số tiền</th>
+            <th>Danh mục</th><th>Lặp lại</th><th>Tự động</th><th>Trạng thái</th>
+            <th class="text-end">Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in reminders %}
+          <tr {% if not r.active %}class="opacity-50"{% endif %}>
+            <td class="fw-semibold">{{ r.message }}</td>
+            <td class="text-nowrap small">{{ r.remind_time.strftime("%d/%m/%Y %H:%M") }}</td>
+            <td class="text-end {% if r.type == 'income' %}text-success{% else %}text-danger{% endif %}">
+              {{ r.amount|vnd }}
+            </td>
+            <td class="small">{{ r.category.name }}</td>
+            <td class="small">{{ repeat_labels[r.repeat_type] }}</td>
+            <td>{% if r.auto_add_transaction %}<span class="badge text-bg-primary">Có</span>{% else %}<span class="text-muted small">—</span>{% endif %}</td>
+            <td>
+              {% if r.active %}
+                <span class="badge text-bg-success">Đang bật</span>
+              {% else %}
+                <span class="badge text-bg-secondary">Đã tắt</span>
+              {% endif %}
+            </td>
+            <td class="text-end text-nowrap">
+              <form method="post" action="/reminders/{{ r.id }}/toggle" class="d-inline">
+                <button class="btn btn-sm btn-outline-secondary">{% if r.active %}Tắt{% else %}Bật{% endif %}</button>
+              </form>
+              <a href="/reminders?edit={{ r.id }}" class="btn btn-sm btn-outline-primary">Sửa</a>
+              <button class="btn btn-sm btn-outline-danger"
+                      data-bs-toggle="modal" data-bs-target="#drm{{ r.id }}">Xóa</button>
+            </td>
+          </tr>
+          <div class="modal fade" id="drm{{ r.id }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h6 class="modal-title">Xác nhận xóa</h6>
+                  <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  Bạn chắc chắn muốn xóa lời nhắc <strong>{{ r.message }}</strong>?
+                </div>
+                <div class="modal-footer">
+                  <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                  <form method="post" action="/reminders/{{ r.id }}/delete">
+                    <button class="btn btn-danger btn-sm">Xóa</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="text-muted mb-0">Chưa có lời nhắc nào.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const typeSel = document.getElementById("rmType");
+  const catSel = document.getElementById("rmCategory");
+
+  function filterCategories() {
+    const want = typeSel.value;
+    let firstMatch = null;
+    for (const opt of catSel.options) {
+      const match = opt.dataset.type === want;
+      opt.hidden = !match;
+      opt.disabled = !match;
+      if (match && firstMatch === null) firstMatch = opt;
+    }
+    if (catSel.selectedOptions[0]?.disabled && firstMatch) firstMatch.selected = true;
+  }
+
+  typeSel.addEventListener("change", filterCategories);
+  filterCategories();
+</script>
+{% endblock %}
