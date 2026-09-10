@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Quản lý giao dịch{% endblock %}
+{% block nav %}{% include "_nav.html" %}{% endblock %}
+
+{% block content %}
+{% set q = request.query_params %}
+{% if q.get("ok") == "created" %}<div class="alert alert-success py-2">Đã thêm giao dịch mới.</div>{% endif %}
+{% if q.get("ok") == "updated" %}<div class="alert alert-success py-2">Đã cập nhật giao dịch.</div>{% endif %}
+{% if q.get("ok") == "deleted" %}<div class="alert alert-success py-2">Đã xóa giao dịch.</div>{% endif %}
+{% if q.get("err") == "notfound" %}<div class="alert alert-danger py-2">Không tìm thấy giao dịch.</div>{% endif %}
+{% if error %}<div class="alert alert-danger py-2">{{ error }}</div>{% endif %}
+
+{% set f = editing or form %}
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h5 class="mb-3">{% if editing %}Cập nhật giao dịch{% else %}Thêm giao dịch mới{% endif %}</h5>
+    <form method="post" action="{% if editing %}/transactions/{{ editing.id }}/edit{% else %}/transactions{% endif %}">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Ngày giờ</label>
+          <input type="datetime-local" name="date" class="form-control" required
+                 value="{{ editing.date.strftime('%Y-%m-%dT%H:%M') if editing else (form.date if form else now) }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Số tiền (VND)</label>
+          <input name="amount" class="form-control" required inputmode="numeric"
+                 placeholder="Ví dụ: 350000"
+                 value="{{ editing.amount if editing else (form.amount if form else '') }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Loại giao dịch</label>
+          <select name="type" id="txType" class="form-select">
+            {% set curType = f.type if f else 'expense' %}
+            {% for t in types %}
+              <option value="{{ t.value }}" {% if curType == t.value %}selected{% endif %}>
+                {{ "Thu nhập" if t.value == "income" else "Chi tiêu" }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Danh mục</label>
+          <select name="category_id" id="txCategory" class="form-select" required>
+            {% set curCat = (editing.category_id if editing else (form.category_id|int if form and form.category_id else 0)) %}
+            {% for c in categories %}
+              <option value="{{ c.id }}" data-type="{{ c.type }}"
+                      {% if curCat == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-9">
+          <label class="form-label">Ghi chú</label>
+          <input name="note" class="form-control"
+                 value="{{ editing.note or '' if editing else (form.note if form else '') }}">
+        </div>
+        <div class="col-md-3 d-flex gap-2 align-items-end">
+          <button class="btn btn-primary flex-fill">{% if editing %}Cập nhật{% else %}Thêm mới{% endif %}</button>
+          {% if editing %}<a href="/transactions" class="btn btn-outline-secondary">Hủy</a>{% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h5 class="mb-3">Danh sách giao dịch <span class="text-muted fs-6">({{ transactions|length }})</span></h5>
+    {% if transactions %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Ngày</th><th class="text-end">Số tiền</th><th>Loại</th>
+            <th>Danh mục</th><th>Ghi chú</th><th class="text-end">Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in transactions %}
+          <tr>
+            <td class="text-nowrap">{{ t.date.strftime("%d/%m/%Y %H:%M") }}</td>
+            <td class="text-end fw-semibold {% if t.type == 'income' %}text-success{% else %}text-danger{% endif %}">
+              {% if t.type == 'income' %}+{% else %}−{% endif %}{{ t.amount|vnd }}
+            </td>
+            <td>
+              {% if t.type == "income" %}
+                <span class="badge text-bg-success">Thu nhập</span>
+              {% else %}
+                <span class="badge text-bg-danger">Chi tiêu</span>
+              {% endif %}
+            </td>
+            <td>{{ t.category.name }}</td>
+            <td class="text-muted small">{{ t.note or "—" }}</td>
+            <td class="text-end text-nowrap">
+              <a href="/transactions?edit={{ t.id }}" class="btn btn-sm btn-outline-primary">Sửa</a>
+              <button class="btn btn-sm btn-outline-danger"
+                      data-bs-toggle="modal" data-bs-target="#dtx{{ t.id }}">Xóa</button>
+            </td>
+          </tr>
+          <div class="modal fade" id="dtx{{ t.id }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h6 class="modal-title">Xác nhận xóa</h6>
+                  <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  Bạn chắc chắn muốn xóa giao dịch <strong>{{ t.amount|vnd }} VND</strong>
+                  ngày {{ t.date.strftime("%d/%m/%Y") }}?
+                </div>
+                <div class="modal-footer">
+                  <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                  <form method="post" action="/transactions/{{ t.id }}/delete">
+                    <button class="btn btn-danger btn-sm">Xóa</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="text-muted mb-0">Chưa có giao dịch nào. Hãy thêm giao dịch đầu tiên ở biểu mẫu phía trên.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Loc danh muc theo loai giao dich dang chon
+  const typeSel = document.getElementById("txType");
+  const catSel = document.getElementById("txCategory");
+
+  function filterCategories() {
+    const want = typeSel.value;
+    let firstMatch = null;
+    for (const opt of catSel.options) {
+      const match = opt.dataset.type === want;
+      opt.hidden = !match;
+      opt.disabled = !match;
+      if (match && firstMatch === null) firstMatch = opt;
+    }
+    // Neu lua chon hien tai khong con hop le thi chon muc dau tien
+    if (catSel.selectedOptions[0]?.disabled && firstMatch) {
+      firstMatch.selected = true;
+    }
+  }
+
+  typeSel.addEventListener("change", filterCategories);
+  filterCategories();
+</script>
+{% endblock %}

@@ -7,7 +7,7 @@ from app.config import settings
 from app.database import Base, engine
 from app.deps import NotAuthenticated, get_current_user
 from app.models import User
-from app.routers import auth, category
+from app.routers import auth, category, transaction
 from app.templating import templates
 
 import app.models  # noqa: F401 - dang ky model truoc khi tao bang
@@ -20,6 +20,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(auth.router)
 app.include_router(category.router)
+app.include_router(transaction.router)
 
 
 @app.exception_handler(NotAuthenticated)
