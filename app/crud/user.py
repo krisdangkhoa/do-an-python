@@ -7,12 +7,12 @@ from app.security import hash_password, verify_password
 
 # Danh muc tao san khi dang ky, de nguoi dung dung duoc ngay
 DEFAULT_CATEGORIES = [
-    ("Luong", "Thu nhap chinh hang thang", TransactionType.INCOME),
-    ("Thu nhap khac", "Thuong, lam them, qua tang", TransactionType.INCOME),
-    ("An uong", "Com, ca phe, di cho", TransactionType.EXPENSE),
-    ("Di lai", "Xang xe, ve tau xe, gui xe", TransactionType.EXPENSE),
-    ("Hoa don", "Dien, nuoc, internet, dien thoai", TransactionType.EXPENSE),
-    ("Mua sam", "Quan ao, do dung ca nhan", TransactionType.EXPENSE),
+    ("Lương", "Thu nhập chính hàng tháng", TransactionType.INCOME),
+    ("Thu nhập khác", "Thưởng, làm thêm, quà tặng", TransactionType.INCOME),
+    ("Ăn uống", "Cơm, cà phê, đi chợ", TransactionType.EXPENSE),
+    ("Đi lại", "Xăng xe, vé tàu xe, gửi xe", TransactionType.EXPENSE),
+    ("Hóa đơn", "Điện, nước, internet, điện thoại", TransactionType.EXPENSE),
+    ("Mua sắm", "Quần áo, đồ dùng cá nhân", TransactionType.EXPENSE),
 ]
 
 
