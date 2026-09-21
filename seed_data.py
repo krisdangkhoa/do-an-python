@@ -2,14 +2,16 @@
 import sys
 from datetime import datetime, timedelta
 
+from sqlalchemy import text
+
 from app.crud import user as crud_user
 from app.database import Base, SessionLocal, engine
-from app.models import Category, Reminder, Transaction, User
+from app.models import Budget, Category, Reminder, Transaction, User
 from app.schemas.user import UserCreate
 
 Base.metadata.create_all(bind=engine)
 
-# Nguoi dung phu - tao TRUOC de giao dich cua ho mang ID 1..4,
+# Nguoi dung phu - tao TRUOC de giao dich cua ho mang ID nho,
 # tien cho phan demo co lap du lieu.
 OTHER = ("linh", "linh@example.com", "Trần Thị Mỹ Linh", "demo123")
 MAIN = ("khoa", "khoa@example.com", "Nguyễn Thành Đăng Khoa", "demo123")
@@ -21,7 +23,6 @@ EXTRA_CATEGORIES = [
 
 # (so ngay truoc hom nay, danh muc, so tien, ghi chu)
 MAIN_TX = [
-    # Thang 6
     (100, "Lương", 15_000_000, "Lương tháng 6"),
     (99, "Hóa đơn", 1_250_000, "Tiền điện nước tháng 6"),
     (97, "Ăn uống", 2_400_000, "Đi chợ đầu tháng"),
@@ -30,7 +31,6 @@ MAIN_TX = [
     (87, "Giải trí", 450_000, "Xem phim cuối tuần"),
     (84, "Ăn uống", 1_100_000, None),
     (80, "Thu nhập khác", 2_500_000, "Làm thêm dự án"),
-    # Thang 7
     (70, "Lương", 15_000_000, "Lương tháng 7"),
     (69, "Hóa đơn", 1_380_000, "Tiền điện nước tháng 7"),
     (67, "Ăn uống", 2_650_000, "Đi chợ đầu tháng"),
@@ -40,7 +40,6 @@ MAIN_TX = [
     (55, "Ăn uống", 1_350_000, None),
     (52, "Mua sắm", 640_000, "Đồ dùng gia đình"),
     (50, "Thu nhập khác", 1_800_000, "Thưởng dự án"),
-    # Thang 8
     (40, "Lương", 15_000_000, "Lương tháng 8"),
     (39, "Hóa đơn", 1_420_000, "Tiền điện nước tháng 8"),
     (37, "Ăn uống", 2_800_000, "Đi chợ đầu tháng"),
@@ -50,7 +49,6 @@ MAIN_TX = [
     (27, "Ăn uống", 1_450_000, None),
     (24, "Sức khỏe", 420_000, "Thuốc cảm"),
     (22, "Thu nhập khác", 3_000_000, "Tiền thưởng quý"),
-    # Thang 9
     (10, "Lương", 15_000_000, "Lương tháng 9"),
     (9, "Hóa đơn", 1_310_000, "Tiền điện nước tháng 9"),
     (8, "Ăn uống", 2_500_000, "Đi chợ đầu tháng"),
@@ -69,16 +67,23 @@ OTHER_TX = [
     (3, "Mua sắm", 1_500_000, "Mỹ phẩm"),
 ]
 
+# Ngan sach hang thang cho tai khoan chinh (danh muc, han muc)
+MAIN_BUDGETS = [
+    ("Ăn uống", 4_500_000),
+    ("Hóa đơn", 1_500_000),
+    ("Giải trí", 400_000),
+    ("Mua sắm", 2_000_000),
+]
+
 
 def wipe(db):
     """Xoa sach du lieu cu."""
+    db.query(Budget).delete()
     db.query(Transaction).delete()
     db.query(Reminder).delete()
     db.query(Category).delete()
     db.query(User).delete()
     db.commit()
-    # Dat lai bo dem ID de moi lan chay cho ra ID giong nhau
-    from sqlalchemy import text
     try:
         db.execute(text("DELETE FROM sqlite_sequence"))
         db.commit()
@@ -99,17 +104,20 @@ def cat_map(db, user_id):
     return {c.name: c for c in rows}
 
 
+def need(cats, name):
+    if name not in cats:
+        raise SystemExit(f"Khong tim thay danh muc '{name}'. Hien co: {sorted(cats)}")
+    return cats[name]
+
+
 def add_transactions(db, user, rows, today):
     cats = cat_map(db, user.id)
     for days_ago, cat_name, amount, note in rows:
-        cat = cats[cat_name]
+        cat = need(cats, cat_name)
         db.add(Transaction(
-            amount=amount,
-            type=cat.type,
+            amount=amount, type=cat.type,
             date=today - timedelta(days=days_ago),
-            note=note,
-            category_id=cat.id,
-            user_id=user.id,
+            note=note, category_id=cat.id, user_id=user.id,
         ))
     db.commit()
 
@@ -120,21 +128,16 @@ def main():
         wipe(db)
         today = datetime.now().replace(hour=9, minute=30, second=0, microsecond=0)
 
-        # --- Nguoi dung phu (tao truoc) ---
         other = make_user(db, OTHER)
         add_transactions(db, other, OTHER_TX, today)
         other_first_tx = (
-            db.query(Transaction)
-            .filter(Transaction.user_id == other.id)
-            .order_by(Transaction.id)
-            .first()
+            db.query(Transaction).filter(Transaction.user_id == other.id)
+            .order_by(Transaction.id).first()
         )
 
-        # --- Nguoi dung chinh ---
         main_user = make_user(db, MAIN)
         for name, desc, type_ in EXTRA_CATEGORIES:
-            db.add(Category(name=name, description=desc,
-                            type=type_, user_id=main_user.id))
+            db.add(Category(name=name, description=desc, type=type_, user_id=main_user.id))
         db.commit()
         add_transactions(db, main_user, MAIN_TX, today)
 
@@ -143,30 +146,30 @@ def main():
             message="Đóng tiền nhà", amount=3_500_000, type="expense",
             remind_time=today.replace(day=1) + timedelta(days=32),
             repeat_type="monthly", active=True, auto_add_transaction=True,
-            category_id=cats["Hóa đơn"].id, user_id=main_user.id,
+            category_id=need(cats, "Hóa đơn").id, user_id=main_user.id,
         ))
         db.add(Reminder(
             message="Nhận lương hàng tháng", amount=15_000_000, type="income",
             remind_time=today.replace(day=1) + timedelta(days=35),
             repeat_type="monthly", active=True, auto_add_transaction=False,
-            category_id=cats["Lương"].id, user_id=main_user.id,
+            category_id=need(cats, "Lương").id, user_id=main_user.id,
         ))
+        for name, limit in MAIN_BUDGETS:
+            db.add(Budget(category_id=need(cats, name).id, amount=limit, user_id=main_user.id))
         db.commit()
 
-        n_tx = db.query(Transaction).filter(
-            Transaction.user_id == main_user.id).count()
+        n_tx = db.query(Transaction).filter(Transaction.user_id == main_user.id).count()
 
         print()
         print("=" * 58)
         print("  DA TAO XONG DU LIEU MAU")
         print("=" * 58)
-        print(f"  Tai khoan chinh : khoa  / demo123   ({n_tx} giao dich)")
+        print(f"  Tai khoan chinh : khoa  / demo123   ({n_tx} giao dich, {len(MAIN_BUDGETS)} ngan sach)")
         print(f"  Tai khoan phu   : linh  / demo123   ({len(OTHER_TX)} giao dich)")
         print()
         print("  DUNG CHO PHAN DEMO CO LAP DU LIEU:")
         print(f"  Giao dich ID {other_first_tx.id} thuoc ve tai khoan 'linh'")
         print(f"  Dang nhap bang 'khoa' roi go: /transactions?edit={other_first_tx.id}")
-        print("  Ket qua mong doi: bieu mau TRONG, khong nap du lieu cua linh")
         print("=" * 58)
         print()
     finally:
