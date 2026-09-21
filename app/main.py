@@ -8,7 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config import settings
 from app.database import Base, engine
 from app.deps import NotAuthenticated
-from app.routers import auth, category, reminder, report, transaction
+from app.routers import auth, category, export, reminder, report, transaction
 from app.services import scheduler as sched
 
 import app.models  # noqa: F401 - dang ky model truoc khi tao bang
@@ -29,6 +29,7 @@ app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(auth.router)
+app.include_router(export.router)
 app.include_router(report.router)
 app.include_router(category.router)
 app.include_router(transaction.router)
