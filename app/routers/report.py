@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.deps import get_current_user
 from app.models import TransactionType, User
+from app.services import budget as svc_budget
 from app.services import report as svc
 from app.templating import templates
 
@@ -33,11 +34,11 @@ def home(
     user: User = Depends(get_current_user),
 ):
     y, m, years = _filters(db, user, year, month)
-    data = svc.summary(db, user.id, y, m)
     return templates.TemplateResponse("home.html", {
         "request": request, "user": user, "active": "home",
-        "s": data, "year": y, "month": m,
+        "s": svc.summary(db, user.id, y, m), "year": y, "month": m,
         "years": years, "months": MONTHS,
+        "alerts": svc_budget.alerts(db, user.id),
     })
 
 

@@ -3,6 +3,21 @@
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 
 {% block content %}
+{% if alerts %}
+<div class="alert {% if alerts|selectattr('level', 'equalto', 'over')|list %}alert-danger{% else %}alert-warning{% endif %} mb-4">
+  <div class="fw-semibold mb-1">Cảnh báo ngân sách tháng này</div>
+  <ul class="mb-1 small">
+    {% for a in alerts %}
+    <li>
+      <strong>{{ a.name }}</strong>: đã chi {{ a.spent|vnd }} / {{ a.limit|vnd }} ({{ a.percent }}%) —
+      {% if a.level == "over" %}đã vượt hạn mức{% else %}sắp chạm hạn mức{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  <a href="/budgets" class="small">Xem chi tiết ngân sách</a>
+</div>
+{% endif %}
+
 <div class="row g-4">
   <div class="col-lg-5">
     <div class="card shadow-sm h-100">
@@ -71,20 +86,13 @@
     type: "pie",
     data: {
       labels: ["Thu nhập", "Chi tiêu"],
-      datasets: [{
-        data: [{{ s.income }}, {{ s.expense }}],
-        backgroundColor: ["#198754", "#DC3545"],
-      }],
+      datasets: [{ data: [{{ s.income }}, {{ s.expense }}], backgroundColor: ["#198754", "#DC3545"] }],
     },
     options: {
       responsive: true,
       plugins: {
         legend: { position: "bottom" },
-        tooltip: {
-          callbacks: {
-            label: (c) => c.label + ": " + c.raw.toLocaleString("vi-VN") + " VND",
-          },
-        },
+        tooltip: { callbacks: { label: (c) => c.label + ": " + c.raw.toLocaleString("vi-VN") + " VND" } },
       },
     },
   });
