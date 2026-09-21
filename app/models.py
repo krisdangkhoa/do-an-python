@@ -93,3 +93,18 @@ class Reminder(Base):
 
     user: Mapped["User"] = relationship(back_populates="reminders")
     category: Mapped["Category"] = relationship()
+
+
+class Budget(Base):
+    """Han muc chi tieu hang thang cho mot danh muc chi tieu."""
+    __tablename__ = "budgets"
+    __table_args__ = (
+        UniqueConstraint("user_id", "category_id", name="uq_budget_user_category"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    amount: Mapped[int] = mapped_column(BigInteger)
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+
+    category: Mapped["Category"] = relationship()

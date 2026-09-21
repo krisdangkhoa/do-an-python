@@ -1,7 +1,7 @@
 """Truy van danh muc. Moi ham deu loc theo user_id."""
 from sqlalchemy.orm import Session
 
-from app.models import Category, Reminder, Transaction
+from app.models import Budget, Category, Reminder, Transaction
 from app.schemas.category import CategoryCreate
 
 
@@ -63,5 +63,7 @@ def usage_count(db: Session, category_id: int) -> int:
 
 
 def delete(db: Session, obj: Category) -> None:
+    # Xoa kem ngan sach cua danh muc, tranh du lieu mo coi
+    db.query(Budget).filter(Budget.category_id == obj.id).delete()
     db.delete(obj)
     db.commit()
