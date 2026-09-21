@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Ngân sách{% endblock %}
+{% block nav %}{% include "_nav.html" %}{% endblock %}
+
+{% block content %}
+{% set q = request.query_params %}
+{% if q.get("ok") == "created" %}<div class="alert alert-success py-2">Đã thêm ngân sách.</div>{% endif %}
+{% if q.get("ok") == "updated" %}<div class="alert alert-success py-2">Đã cập nhật hạn mức.</div>{% endif %}
+{% if q.get("ok") == "deleted" %}<div class="alert alert-success py-2">Đã xóa ngân sách.</div>{% endif %}
+{% if q.get("err") == "notfound" %}<div class="alert alert-danger py-2">Không tìm thấy ngân sách.</div>{% endif %}
+{% if error %}<div class="alert alert-danger py-2">{{ error }}</div>{% endif %}
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h5 class="mb-3">{% if editing %}Sửa hạn mức: {{ editing.category.name }}{% else %}Đặt ngân sách mới{% endif %}</h5>
+    <form method="post" action="{% if editing %}/budgets/{{ editing.id }}/edit{% else %}/budgets{% endif %}">
+      <div class="row g-3 align-items-end">
+        {% if not editing %}
+        <div class="col-md-5">
+          <label class="form-label">Danh mục chi tiêu</label>
+          <select name="category_id" class="form-select" required>
+            {% for c in categories %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+        <div class="col-md-4">
+          <label class="form-label">Hạn mức mỗi tháng (VND)</label>
+          <input name="amount" class="form-control" required inputmode="numeric"
+                 placeholder="Ví dụ: 3000000" value="{{ editing.amount if editing else '' }}">
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+          <button class="btn btn-primary flex-fill">{% if editing %}Cập nhật{% else %}Thêm{% endif %}</button>
+          {% if editing %}<a href="/budgets" class="btn btn-outline-secondary">Hủy</a>{% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h5 class="mb-1">Tình trạng ngân sách</h5>
+    <p class="text-muted small mb-3">{{ month_label }} · cảnh báo khi đã chi từ 80% hạn mức</p>
+    {% if rows %}
+      {% for r in rows %}
+      {% set color = {"ok": "success", "warning": "warning", "over": "danger"}[r.level] %}
+      <div class="border rounded p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <span class="fw-semibold">{{ r.name }}</span>
+            {% if r.level == "over" %}<span class="badge text-bg-danger ms-2">Đã vượt</span>
+            {% elif r.level == "warning" %}<span class="badge text-bg-warning ms-2">Sắp chạm hạn mức</span>
+            {% else %}<span class="badge text-bg-success ms-2">Trong hạn mức</span>{% endif %}
+          </div>
+          <div class="text-nowrap">
+            <a href="/budgets?edit={{ r.budget.id }}" class="btn btn-sm btn-outline-primary">Sửa</a>
+            <form method="post" action="/budgets/{{ r.budget.id }}/delete" class="d-inline"
+                  onsubmit="return confirm('Xóa ngân sách của danh mục {{ r.name }}?')">
+              <button class="btn btn-sm btn-outline-danger">Xóa</button>
+            </form>
+          </div>
+        </div>
+        <div class="progress mb-2" style="height:10px">
+          <div class="progress-bar bg-{{ color }}" style="width:{{ [r.percent, 100]|min }}%"></div>
+        </div>
+        <div class="d-flex justify-content-between small text-muted">
+          <span>Đã chi {{ r.spent|vnd }} / {{ r.limit|vnd }} ({{ r.percent }}%)</span>
+          <span>
+            {% if r.remaining >= 0 %}Còn lại {{ r.remaining|vnd }}
+            {% else %}<span class="text-danger fw-semibold">Vượt {{ (-r.remaining)|vnd }}</span>{% endif %}
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted mb-0">Chưa đặt ngân sách nào.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -6,21 +6,12 @@
     </button>
     <div class="collapse navbar-collapse" id="nav">
       <ul class="navbar-nav me-auto">
-        <li class="nav-item">
-          <a class="nav-link {% if active == 'home' %}active fw-semibold{% endif %}" href="/">Trang chủ</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if active == 'transactions' %}active fw-semibold{% endif %}" href="/transactions">Giao dịch</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if active == 'categories' %}active fw-semibold{% endif %}" href="/categories">Danh mục</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if active == 'report' %}active fw-semibold{% endif %}" href="/report">Báo cáo</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if active == 'reminders' %}active fw-semibold{% endif %}" href="/reminders">Lời nhắc</a>
-        </li>
+        <li class="nav-item"><a class="nav-link {% if active == 'home' %}active fw-semibold{% endif %}" href="/">Trang chủ</a></li>
+        <li class="nav-item"><a class="nav-link {% if active == 'transactions' %}active fw-semibold{% endif %}" href="/transactions">Giao dịch</a></li>
+        <li class="nav-item"><a class="nav-link {% if active == 'categories' %}active fw-semibold{% endif %}" href="/categories">Danh mục</a></li>
+        <li class="nav-item"><a class="nav-link {% if active == 'budgets' %}active fw-semibold{% endif %}" href="/budgets">Ngân sách</a></li>
+        <li class="nav-item"><a class="nav-link {% if active == 'report' %}active fw-semibold{% endif %}" href="/report">Báo cáo</a></li>
+        <li class="nav-item"><a class="nav-link {% if active == 'reminders' %}active fw-semibold{% endif %}" href="/reminders">Lời nhắc</a></li>
       </ul>
       <span class="navbar-text text-white-50 me-3">{{ user.full_name }}</span>
       <a href="/logout" class="btn btn-outline-light btn-sm">Đăng xuất</a>
