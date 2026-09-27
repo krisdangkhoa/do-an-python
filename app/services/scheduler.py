@@ -6,7 +6,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.crud import reminder as crud_reminder
 from app.database import SessionLocal
-from app.models import RepeatType, Transaction
+from app.models import RepeatType, Transaction, User
 
 log = logging.getLogger("scheduler")
 
@@ -20,7 +20,6 @@ def _next_time(current: datetime, repeat: str) -> datetime | None:
     if repeat == RepeatType.WEEKLY.value:
         return current + timedelta(weeks=1)
     if repeat == RepeatType.MONTHLY.value:
-        # Cong them mot thang, giu nguyen ngay neu co the
         year, month = current.year, current.month + 1
         if month > 12:
             year, month = year + 1, 1
@@ -35,8 +34,11 @@ def _next_time(current: datetime, repeat: str) -> datetime | None:
 
 def process_due_reminders() -> int:
     """Xu ly cac loi nhac den han. Tra ve so loi nhac da xu ly."""
+    from app.services import budget_alert, mailer  # tranh import vong
+
     db = SessionLocal()
     processed = 0
+    created = []  # cac khoan vua tu sinh, de kiem tra ngan sach sau khi luu
     try:
         now = datetime.now()
         for rm in crud_reminder.due_reminders(db, now):
@@ -49,18 +51,24 @@ def process_due_reminders() -> int:
                     category_id=rm.category_id,
                     user_id=rm.user_id,
                 ))
+                created.append((rm.user_id, rm.category_id, rm.remind_time, rm.type))
 
             nxt = _next_time(rm.remind_time, rm.repeat_type)
             if nxt:
                 rm.remind_time = nxt
             else:
-                rm.active = False  # khong lap lai thi tat sau khi chay
-
+                rm.active = False
             processed += 1
 
         if processed:
             db.commit()
             log.info("Da xu ly %d loi nhac den han", processed)
+
+        for user_id, category_id, when, type_ in created:
+            alert = budget_alert.check(db, user_id, category_id, when, type_)
+            if alert:
+                user = db.get(User, user_id)
+                mailer.send_budget_alert(user.email, user.full_name, alert)
     except Exception:
         db.rollback()
         log.exception("Loi khi xu ly loi nhac")

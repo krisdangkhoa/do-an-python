@@ -1,7 +1,7 @@
 """Quan ly giao dich thu - chi."""
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
@@ -10,8 +10,9 @@ from app.crud import category as crud_category
 from app.crud import transaction as crud_tx
 from app.database import get_db
 from app.deps import get_current_user
-from app.models import TransactionType, User
+from app.models import Transaction, TransactionType, User
 from app.schemas.transaction import TransactionCreate
+from app.services import budget_alert, mailer
 from app.templating import templates
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
@@ -43,12 +44,10 @@ def _validate(db: Session, user: User, amount, type_, date_, note, category_id):
     except (ValueError, TypeError):
         return None, "Vui lòng chọn danh mục."
 
-    # Danh muc phai thuoc tai khoan nay
     cat = crud_category.get(db, cat_id, user.id)
     if cat is None:
         return None, "Danh mục không hợp lệ."
 
-    # Danh muc phai khop loai giao dich
     if cat.type != type_:
         loai = "thu nhập" if type_ == "income" else "chi tiêu"
         return None, f"Danh mục “{cat.name}” không thuộc loại {loai}."
@@ -62,6 +61,15 @@ def _validate(db: Session, user: User, amount, type_, date_, note, category_id):
         return None, exc.errors()[0]["msg"]
 
     return data, None
+
+
+def _check_budget(request: Request, background: BackgroundTasks, db: Session,
+                  user: User, tx: Transaction) -> None:
+    """Neu khoan chi vua lam cham muc canh bao: gui email chay nen va bao tren man hinh."""
+    alert = budget_alert.check(db, user.id, tx.category_id, tx.date, tx.type)
+    if alert:
+        background.add_task(mailer.send_budget_alert, user.email, user.full_name, alert)
+        request.session["flash"] = f"{budget_alert.message(alert)} Đã gửi email cảnh báo tới {user.email}."
 
 
 @router.get("")
@@ -80,6 +88,7 @@ def index(
 @router.post("")
 def create(
     request: Request,
+    background: BackgroundTasks,
     amount: str = Form(...),
     type: str = Form(...),
     date: str = Form(...),
@@ -98,7 +107,8 @@ def create(
             status_code=400,
         )
 
-    crud_tx.create(db, data, user.id)
+    tx = crud_tx.create(db, data, user.id)
+    _check_budget(request, background, db, user, tx)
     return RedirectResponse("/transactions?ok=created", status_code=303)
 
 
@@ -106,6 +116,7 @@ def create(
 def edit_post(
     tx_id: int,
     request: Request,
+    background: BackgroundTasks,
     amount: str = Form(...),
     type: str = Form(...),
     date: str = Form(...),
@@ -126,7 +137,8 @@ def edit_post(
             status_code=400,
         )
 
-    crud_tx.update(db, obj, data)
+    tx = crud_tx.update(db, obj, data)
+    _check_budget(request, background, db, user, tx)
     return RedirectResponse("/transactions?ok=updated", status_code=303)
 
 
