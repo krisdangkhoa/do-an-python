@@ -108,3 +108,17 @@ class Budget(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
 
     category: Mapped["Category"] = relationship()
+
+class BudgetAlert(Base):
+    """Ghi nhan canh bao da gui. Moi muc chi gui mot lan moi thang."""
+    __tablename__ = "budget_alerts"
+    __table_args__ = (
+        UniqueConstraint("budget_id", "month", "level", name="uq_alert_budget_month_level"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    budget_id: Mapped[int] = mapped_column(ForeignKey("budgets.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    month: Mapped[str] = mapped_column(String(7))   # dang 2026-09
+    level: Mapped[str] = mapped_column(String(10))  # warning hoac over
+    sent_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
