@@ -7,6 +7,20 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
+from app.services import mailer
+
+
+@pytest.fixture(autouse=True)
+def sent_emails(monkeypatch):
+    """Khong bao gio gui email that khi kiem thu: ghi lai vao danh sach."""
+    sent = []
+
+    def fake_send(to, subject, body):
+        sent.append({"to": to, "subject": subject, "body": body})
+        return True
+
+    monkeypatch.setattr(mailer, "send_email", fake_send)
+    return sent
 
 
 @pytest.fixture()
@@ -15,7 +29,7 @@ def db_session():
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
-        poolclass=StaticPool,  # giu chung mot ket noi de du lieu khong bi mat
+        poolclass=StaticPool,
     )
     Base.metadata.create_all(bind=engine)
     TestingSession = sessionmaker(bind=engine, autocommit=False, autoflush=False)

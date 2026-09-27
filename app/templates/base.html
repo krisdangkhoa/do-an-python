@@ -8,6 +8,15 @@
 </head>
 <body class="bg-light">
 {% block nav %}{% endblock %}
+{% set flash = pop_flash(request) if "session" in request.scope else None %}
+{% if flash %}
+<div class="container pt-3">
+  <div class="alert alert-warning alert-dismissible fade show mb-0">
+    <strong>Cảnh báo ngân sách.</strong> {{ flash }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+</div>
+{% endif %}
 <main class="container py-4">
   {% block content %}{% endblock %}
 </main>

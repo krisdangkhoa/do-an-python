@@ -12,7 +12,13 @@ def vnd(value) -> str:
         return str(value)
 
 
+def pop_flash(request: Request):
+    """Lay thong bao mot lan tu session (hien xong thi mat)."""
+    return request.session.pop("flash", None)
+
+
 _templates.env.filters["vnd"] = vnd
+_templates.env.globals["pop_flash"] = pop_flash
 
 
 class Templates:
@@ -23,7 +29,6 @@ class Templates:
         self.env = inner.env
 
     def TemplateResponse(self, name, context=None, **kwargs):
-        # Cu phap moi cua Starlette: Request dung truoc, ten template sau
         request: Request = context.pop("request")
         return self._inner.TemplateResponse(request, name, context, **kwargs)
 

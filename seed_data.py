@@ -6,7 +6,8 @@ from sqlalchemy import text
 
 from app.crud import user as crud_user
 from app.database import Base, SessionLocal, engine
-from app.models import Budget, Category, Reminder, Transaction, User
+from app.config import settings
+from app.models import Budget, BudgetAlert, Category, Reminder, Transaction, User
 from app.schemas.user import UserCreate
 
 Base.metadata.create_all(bind=engine)
@@ -14,7 +15,7 @@ Base.metadata.create_all(bind=engine)
 # Nguoi dung phu - tao TRUOC de giao dich cua ho mang ID nho,
 # tien cho phan demo co lap du lieu.
 OTHER = ("linh", "linh@example.com", "Trần Thị Mỹ Linh", "demo123")
-MAIN = ("khoa", "khoa@example.com", "Nguyễn Thành Đăng Khoa", "demo123")
+MAIN = ("khoa", settings.DEMO_EMAIL or "khoa@example.com", "Nguyễn Thành Đăng Khoa", "demo123")
 
 EXTRA_CATEGORIES = [
     ("Giải trí", "Xem phim, cà phê, du lịch", "expense"),
@@ -78,6 +79,7 @@ MAIN_BUDGETS = [
 
 def wipe(db):
     """Xoa sach du lieu cu."""
+    db.query(BudgetAlert).delete()
     db.query(Budget).delete()
     db.query(Transaction).delete()
     db.query(Reminder).delete()
